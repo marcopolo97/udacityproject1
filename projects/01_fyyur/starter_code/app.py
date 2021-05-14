@@ -89,32 +89,46 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
-  areas = db.session.query(Venue.city, Venue.state).distinct(Venue.city, Venue.state).order_by('state').all()
-  
-  data = []
-  
-  for area in areas:
- 
-    venues = Venue.query.filter_by(state=area.state).filter_by(city=area.city).order_by('name').all()
+    data_areas = []
 
-    venue_data = []
+    # Get areas
+    areas = Venue.query \
+        .with_entities(Venue.city, Venue.state) \
+        .group_by(Venue.city, Venue.state) \
+        .all()
 
-    data.append({
-        'city': area.city,
-        'state': area.state,
-        'venues': venue_data
-    })
+    for area in areas:
+        data_venues = []
 
-  for venue in venues:
-      shows = Show.query.filter_by(venue_id=venue.id).order_by('id').all()
-      venue_data.append({
-          'id': venue.id,
-          'name': venue.name,
-          'num_upcoming_shows': len([show for show in venue.the_shows if show.start_time > datetime.now()])
-  
-      })
+        # Get venues by area
+        venues = Venue.query \
+            .filter_by(state=area.state) \
+            .filter_by(city=area.city) \
+            .all()
 
-  return render_template('pages/venues.html', areas=data);
+        # Iterate over each venue
+        for venue in venues:
+            # Get upcoming shows by venue
+            upcoming_shows = db.session \
+                    .query(Show) \
+                    .filter(Show.venue_id == venue.id) \
+                    .filter(Show.start_time > datetime.now()) \
+                    .all()
+
+            # Map venues
+            data_venues.append({
+                'id': venue.id,
+                'name': venue.name,
+                'num_upcoming_shows': len(upcoming_shows)
+            })
+
+        data_areas.append({
+            'city': area.city,
+            'state': area.state,
+            'venues': data_venues
+        })
+
+    return render_template('pages/venues.html', areas=data_areas);
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
@@ -237,6 +251,8 @@ def create_venue_submission():
 def delete_venue(venue_id):
   # TODO: Complete this endpoint for taking a venue_id, and using
   # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
+
+  
 
   # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
   # clicking that button delete it from the db then redirect the user to the homepage
