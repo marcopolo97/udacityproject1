@@ -370,7 +370,20 @@ def edit_artist_submission(artist_id):
   artist.website = form.website_link.data,
   artist.seeking_venue = form.seeking_venue.data,
   artist.seeking_description = form.seeking_description.data
-  db.session.commit()
+
+  try:
+
+    db.session.commit()
+    flash("Artist {} is updated successfully".format(artist.name))
+
+  except: 
+    db.session.rollback()
+    flash("Artist {} is updated successfully".format(artist.name))
+  # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
+  # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
+
+  finally:
+    db.session.close()
 
 
 
